@@ -1,0 +1,783 @@
+DASHBOARD AFTER CHANGE
+
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { CyberButton } from '@/components/ui/cyber-button';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import ZoneCard from '@/components/ZoneCard';
+import GlitchText from '@/components/GlitchText';
+import { LogOut, Trophy, Zap, Shield, Target, AlertTriangle } from 'lucide-react';
+import apiFetch from '@/lib/api'; // Assuming your API helper is here
+
+// Define TypeScript interfaces to match the backend response structure
+interface Challenge {
+  id: string;
+  title: string;
+  points: number;
+  difficulty: string;
+  description: string;
+  isSolved: boolean;
+  // Add any other challenge properties you need from the API response
+}
+
+interface Zone {
+  id: string;
+  name: string;
+  description: string;
+  order: number;
+  challenges: Challenge[];
+  // Add any other zone properties you need from the API response
+}
+
+const Dashboard: React.FC = () => {
+  const { currentTeam, logout } = useAuth();
+  const navigate = useNavigate();
+
+  // State to hold data fetched from the backend
+  const [zonesData, setZonesData] = useState<Zone[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // useEffect to fetch data as soon as the component mounts
+  useEffect(() => {
+    // We don't want to fetch if the user isn't authenticated yet
+    if (!currentTeam) {
+      setIsLoading(false);
+      return;
+    }
+
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true);
+        const data: Zone[] = await apiFetch('/challenges/zones');
+        // Sort zones by the 'order' field provided by the backend
+        const sortedData = data.sort((a, b) => a.order - b.order);
+        setZonesData(sortedData);
+        setError(null);
+      } catch (err: any) {
+        console.error("Failed to fetch dashboard data:", err);
+        setError(err.message || "A connection error occurred. Please try again.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [currentTeam]); // Dependency array ensures this runs when currentTeam is available
+
+  // Redirect to login if there's no team after the initial check.
+  // This check is important and should remain.
+  if (!currentTeam) {
+    navigate('/login');
+    return null;
+  }
+
+  // --- Dynamic Calculations based on LIVE data ---
+  // Calculate total challenges by summing up the challenges in each fetched zone
+  const totalChallenges = zonesData.reduce((acc, zone) => acc + zone.challenges.length, 0);
+  // Get total solved from the auth context, which is the source of truth
+  const totalSolved = currentTeam.solvedChallenges.length;
+  // Calculate progress percentage, preventing division by zero
+  const progress = totalChallenges > 0 ? Math.round((totalSolved / totalChallenges) * 100) : 0;
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
+  // --- UI States ---
+
+  // Display a loading indicator while fetching data
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-primary font-cyber text-xl animate-pulse">
+        ACCESSING COMMAND CENTER...
+      </div>
+    );
+  }
+
+  // Display an error message if the API call fails
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center text-center p-4">
+        <AlertTriangle className="w-12 h-12 text-destructive mb-4" />
+        <h2 className="text-2xl font-bold font-cyber text-destructive-foreground mb-2">System Error</h2>
+        <p className="text-muted-foreground mb-6">{error}</p>
+        <CyberButton variant="outline" onClick={() => window.location.reload()}>
+          Retry Connection
+        </CyberButton>
+      </div>
+    );
+  }
+
+  // --- Main Dashboard UI ---
+  return (
+    <div className="min-h-screen p-6">
+      {/* Header - Unchanged */}
+      <motion.div
+        initial={{ opacity: 0, y: -30 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8"
+      >
+        <div className="mb-4 lg:mb-0">
+          <GlitchText className="text-3xl font-bold mb-2" intensity="low">
+            COMMAND CENTER
+          </GlitchText>
+          <div className="flex items-center gap-4">
+            <h2 className="text-xl text-muted-foreground font-cyber">
+              Team: <span className="text-primary">{currentTeam.name}</span>
+            </h2>
+            <Badge variant="outline" className="font-mono text-primary border-primary/50">
+              {/* Use 'score' from your team object in auth context */}
+              {currentTeam.score} points
+            </Badge>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <CyberButton
+            variant="outline"
+            onClick={() => navigate('/leaderboard')}
+            className="gap-2"
+          >
+            <Trophy className="w-4 h-4" />
+            Leaderboard
+          </CyberButton>
+          <CyberButton
+            variant="ghost"
+            onClick={handleLogout}
+            className="gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </CyberButton>
+        </div>
+      </motion.div>
+
+      {/* System Status - Now uses dynamic data */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.2 }}
+        className="zone-card p-6 mb-8"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-primary" />
+            <h3 className="text-lg font-bold font-cyber">System Integrity Status</h3>
+          </div>
+          <div className="text-right">
+            <div className="text-2xl font-bold font-mono text-primary">{progress}%</div>
+            <div className="text-xs text-muted-foreground">RESTORED</div>
+          </div>
+        </div>
+        
+        <div className="mb-4">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm text-muted-foreground font-cyber">
+              Anomalies Resolved
+            </span>
+            <span className="text-sm font-mono text-primary">
+              {totalSolved}/{totalChallenges}
+            </span>
+          </div>
+          <Progress value={progress} className="h-2" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="text-center p-3 bg-muted/20 rounded-lg">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Target className="w-4 h-4 text-success" />
+              <span className="text-sm font-cyber text-muted-foreground">Solved</span>
+            </div>
+            <div className="text-lg font-bold font-mono text-success">{totalSolved}</div>
+          </div>
+          
+          <div className="text-center p-3 bg-muted/20 rounded-lg">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Zap className="w-4 h-4 text-primary" />
+              <span className="text-sm font-cyber text-muted-foreground">Total Points</span>
+            </div>
+            <div className="text-lg font-bold font-mono text-primary">{currentTeam.score}</div>
+          </div>
+          
+          <div className="text-center p-3 bg-muted/20 rounded-lg">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Trophy className="w-4 h-4 text-secondary" />
+              <span className="text-sm font-cyber text-muted-foreground">Badges</span>
+            </div>
+            {/* Make sure 'badges' is a property on your Team type */}
+            <div className="text-lg font-bold font-mono text-secondary">{currentTeam.badges?.length || 0}</div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Zones Grid - Now maps over fetched API data */}
+      <div className="mb-8">
+        <motion.div
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mb-6"
+        >
+          <h3 className="text-2xl font-bold font-cyber mb-2">Corrupted Zones</h3>
+          <p className="text-muted-foreground font-cyber">
+            Navigate through fractured reality. Each zone contains anomalies waiting to be resolved.
+          </p>
+        </motion.div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {zonesData.map((zone, index) => (
+            <ZoneCard
+              key={zone.id}
+              zone={zone}
+              challenges={zone.challenges}
+              onClick={() => navigate(`/challenges/${zone.id}`)}
+              index={index}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Badges Section - Unchanged */}
+      {currentTeam.badges && currentTeam.badges.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="zone-card p-6"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Trophy className="w-5 h-5 text-secondary" />
+            <h3 className="text-lg font-bold font-cyber">Earned Badges</h3>
+          </div>
+          
+          <div className="flex flex-wrap gap-2">
+            {currentTeam.badges.map((badge, index) => (
+              <motion.div
+                key={badge}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.6 + index * 0.1 }}
+              >
+                <Badge className="font-cyber text-secondary border-secondary/50 bg-secondary/10">
+                  {badge}
+                </Badge>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Scan Line Effect - Unchanged */}
+      <motion.div
+        initial={{ x: '-100%' }}
+        animate={{ x: '100%' }}
+        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+        className="fixed top-0 left-0 w-1 h-full bg-gradient-to-b from-transparent via-primary/50 to-transparent pointer-events-none"
+      />
+    </div>
+  );
+};
+
+export default Dashboard;
+
+
+ZONE CARD.TSX
+
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Lock, CheckCircle, Zap } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+
+// --- Component Types ---
+// In a real app, these would be imported from a central types file.
+interface Challenge {
+  id: string;
+  title: string;
+  points: number;
+  difficulty: string;
+  description: string;
+  isSolved: boolean;
+}
+
+interface Zone {
+  id: string;
+  name: string;
+  description: string;
+  order: number;
+  challenges: Challenge[];
+  isUnlocked?: boolean;
+}
+
+
+// --- The Corrected ZoneCard Component ---
+
+interface ZoneCardProps {
+  zone: Zone;
+  challenges: Challenge[];
+  onClick: () => void;
+  index: number;
+}
+
+const ZoneCard: React.FC<ZoneCardProps> = ({ zone, challenges, onClick, index }) => {
+  // This hook will now correctly use the REAL logged-in user from your AuthProvider
+  const { currentTeam } = useAuth();
+  
+  // This calculation logic correctly uses the live team data.
+  const solvedChallenges = challenges.filter(challenge => 
+    currentTeam?.solvedChallenges.includes(challenge.id)
+  ).length;
+  
+  const totalChallenges = challenges.length;
+  const isFullySolved = totalChallenges > 0 && solvedChallenges === totalChallenges;
+  const progress = totalChallenges > 0 ? (solvedChallenges / totalChallenges) * 100 : 0;
+
+  const zoneIcons: { [key: string]: string } = {
+    'boot-sector': '⚡',
+    'corrupted-forest': '🌲',
+    'broken-city': '🏙️',
+    'kernel-core': '💎',
+    'dummy-zone': '🔧'
+  };
+
+  const getIconKey = (name: string) => {
+    return name.toLowerCase().replace(/\s+/g, '-');
+  };
+
+  const iconKey = getIconKey(zone.name);
+
+  // Helper for conditional class names without a utility
+  const getCardClassName = () => {
+    let classes = "zone-card relative overflow-hidden rounded-lg p-6 cursor-pointer group";
+    if (isFullySolved) {
+      classes += " solved healing-animation";
+    }
+    return classes;
+  };
+
+  const getProgressBarClassName = () => {
+    let classes = "h-full rounded-full transition-all duration-300";
+    if (isFullySolved) {
+      classes += " bg-gradient-to-r from-success to-success/80 shadow-lg shadow-success/25";
+    } else {
+      classes += " bg-gradient-to-r from-primary to-secondary";
+    }
+    return classes;
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 50 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: index * 0.1 }}
+      whileHover={{ y: -8, scale: 1.02 }}
+      className={getCardClassName()}
+      onClick={onClick}
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      
+      <div className="flex items-center justify-between mb-4">
+        <div className="text-4xl">
+          {zoneIcons[iconKey] || '❓'}
+        </div>
+        {isFullySolved ? (
+          <CheckCircle className="w-6 h-6 text-success animate-pulse" />
+        ) : (
+          <Zap className="w-6 h-6 text-primary" />
+        )}
+      </div>
+
+      <h3 className="text-xl font-bold mb-2 text-foreground group-hover:text-primary transition-colors">
+        {zone.name}
+      </h3>
+
+      <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+        {zone.description}
+      </p>
+
+      <div className="mb-3">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-xs text-muted-foreground">Progress</span>
+          <span className="text-xs font-mono text-primary">
+            {solvedChallenges}/{totalChallenges}
+          </span>
+        </div>
+        <div className="w-full bg-muted/30 rounded-full h-2 overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 1, delay: index * 0.2 }}
+            className={getProgressBarClassName()}
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-muted-foreground">
+          {totalChallenges} challenge{totalChallenges !== 1 ? 's' : ''}
+        </span>
+        {isFullySolved && (
+          <span className="text-success font-medium">SECURED</span>
+        )}
+      </div>
+
+      <div className="absolute inset-0 border border-primary/0 group-hover:border-primary/50 rounded-lg transition-colors duration-300" />
+    </motion.div>
+  );
+};
+
+export default ZoneCard;
+
+
+CHALLENGE VIEW.TSX
+import React, { useState, useEffect, createContext, useContext } from 'react';
+import { motion } from 'framer-motion';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, MapPin, AlertTriangle } from 'lucide-react';
+import apiFetch from '@/lib/api';
+
+// --- Helper Types & Placeholders for a Self-Contained Component ---
+
+interface Team {
+    id: string;
+    name: string;
+    score: number;
+    solvedChallenges: string[];
+    badges: string[];
+}
+
+interface Challenge {
+  id: string;
+  title: string;
+  points: number;
+  difficulty: string;
+  description: string;
+  isSolved: boolean;
+}
+
+interface Zone {
+  id: string;
+  name: string;
+  description: string;
+  order: number;
+  challenges: Challenge[];
+}
+
+// Placeholder: Mock AuthContext to allow ChallengeCard to check solved status
+const mockTeam: Team = { id: 'team-1', name: 'Temp', score: 0, solvedChallenges: [], badges: [] };
+const AuthContext = createContext<{ currentTeam: Team | null; refetchTeam: () => Promise<void> }>({ currentTeam: mockTeam, refetchTeam: async () => {} });
+const useAuth = () => useContext(AuthContext);
+
+
+// Placeholder: A simple CyberButton component
+const CyberButton = ({ children, onClick, variant = 'primary', className = '' }: { children: React.ReactNode, onClick: () => void, variant?: string, className?: string }) => (
+    <button onClick={onClick} className={`px-4 py-2 rounded-md border ${className}`}>{children}</button>
+);
+
+// Placeholder: A simple GlitchText component
+const GlitchText = ({ children, className = '' }: { children: React.ReactNode, className?: string }) => (
+    <h1 className={className}>{children}</h1>
+);
+
+// Placeholder: A simple ChallengeCard component
+const ChallengeCard = ({ challenge, index }: { challenge: Challenge, index: number }) => {
+    const { refetchTeam } = useAuth(); // To refresh data after solving
+    // In a real component, you'd have a modal to submit a flag
+    const handleSolve = () => {
+        alert(`In a real app, you would now solve: ${challenge.title}`);
+        // Example of how you might submit a flag
+        // apiFetch('/challenges/submit', { method: 'POST', body: { challengeId: challenge.id, flag: 'some-flag' } })
+        //  .then(() => refetchTeam());
+    };
+    return (
+        <div className="border rounded-lg p-4 bg-gray-800/20">
+            <h3 className="font-bold text-lg">{challenge.title} ({challenge.points} pts)</h3>
+            <p className="text-sm text-gray-400">{challenge.difficulty}</p>
+            <p className="mt-2">{challenge.description}</p>
+            {challenge.isSolved && <p className="text-green-400 font-bold mt-2">SOLVED</p>}
+        </div>
+    );
+};
+
+
+// --- The Corrected ChallengeView Component ---
+
+const ChallengeView: React.FC = () => {
+  const { zoneId } = useParams<{ zoneId: string }>();
+  const navigate = useNavigate();
+  const { currentTeam } = useAuth(); // Get current team to pass to context provider
+
+  // State for the specific zone we are viewing
+  const [zone, setZone] = useState<Zone | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!zoneId) {
+        setError("No Zone ID provided.");
+        setIsLoading(false);
+        return;
+    }
+
+    const fetchZoneData = async () => {
+      try {
+        setIsLoading(true);
+        // We fetch all zones, then find the one we need.
+        const allZones: Zone[] = await apiFetch('/challenges/zones');
+        const currentZone = allZones.find(z => z.id === zoneId);
+
+        if (currentZone) {
+          setZone(currentZone);
+          setError(null);
+        } else {
+          setError(`Zone with ID ${zoneId} could not be found.`);
+        }
+      } catch (err: any) {
+        setError(err.message || "Failed to connect to the server.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchZoneData();
+  }, [zoneId]);
+
+  // --- UI Loading and Error States ---
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center font-cyber animate-pulse">LOADING ZONE DATA...</div>;
+  }
+
+  if (error || !zone) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center text-center p-4">
+        <AlertTriangle className="w-12 h-12 text-destructive mb-4" />
+        <h1 className="text-2xl font-bold text-destructive mb-4">Zone Not Found</h1>
+        <p className="text-muted-foreground mb-6">{error}</p>
+        <CyberButton onClick={() => navigate('/dashboard')}>
+          Return to Dashboard
+        </CyberButton>
+      </div>
+    );
+  }
+
+  // --- Dynamic Calculations for UI ---
+  const zoneBackgrounds: { [key: string]: string } = {
+    'boot-sector': 'from-yellow-900/10 to-orange-900/10',
+    'corrupted-forest': 'from-green-900/10 to-emerald-900/10',
+    'broken-city': 'from-blue-900/10 to-cyan-900/10',
+    'kernel-core': 'from-purple-900/10 to-pink-900/10',
+    'dummy-zone': 'from-gray-900/10 to-slate-900/10'
+  };
+  const getBackgroundKey = (name: string) => name.toLowerCase().replace(/\s+/g, '-');
+  const backgroundKey = getBackgroundKey(zone.name);
+
+  const totalPoints = zone.challenges.reduce((sum, c) => sum + c.points, 0);
+  const difficultySpread = `${zone.challenges.filter(c => c.difficulty === 'Easy').length}E / ${zone.challenges.filter(c => c.difficulty === 'Medium').length}M / ${zone.challenges.filter(c => c.difficulty === 'Hard').length}H / ${zone.challenges.filter(c => c.difficulty === 'Insane').length}I`;
+
+  return (
+    // We provide the currentTeam here so child components like ChallengeCard can access it
+    <AuthContext.Provider value={{ currentTeam, refetchTeam: async () => {} }}>
+        <div className="min-h-screen p-6">
+            <div className={`fixed inset-0 bg-gradient-to-br ${zoneBackgrounds[backgroundKey] || 'from-primary/5 to-secondary/5'} pointer-events-none`} />
+
+            <motion.div initial={{ opacity: 0, y: -30 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8 relative z-10">
+                <div>
+                    <CyberButton variant="ghost" onClick={() => navigate('/dashboard')} className="gap-2 mb-4">
+                        <ArrowLeft className="w-4 h-4" />
+                        Back to Dashboard
+                    </CyberButton>
+                    <div className="flex items-center gap-3 mb-2">
+                        <MapPin className="w-6 h-6 text-primary" />
+                        <GlitchText className="text-3xl font-bold" intensity="low">
+                            {zone.name.toUpperCase()}
+                        </GlitchText>
+                    </div>
+                    <p className="text-muted-foreground font-cyber max-w-2xl">{zone.description}</p>
+                </div>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="zone-card p-6 mb-8 relative z-10">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="text-center"><div className="text-2xl font-bold font-mono text-primary mb-2">{zone.challenges.length}</div><div className="text-sm text-muted-foreground font-cyber">Total Anomalies</div></div>
+                    <div className="text-center"><div className="text-2xl font-bold font-mono text-secondary mb-2">{totalPoints}</div><div className="text-sm text-muted-foreground font-cyber">Possible Points</div></div>
+                    <div className="text-center"><div className="text-2xl font-bold font-mono text-success mb-2">{difficultySpread}</div><div className="text-sm text-muted-foreground font-cyber">Difficulty Spread</div></div>
+                </div>
+            </motion.div>
+
+            <div className="relative z-10">
+                <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} className="mb-6">
+                    <h3 className="text-2xl font-bold font-cyber mb-2">Active Anomalies</h3>
+                    <p className="text-muted-foreground font-cyber">Resolve these digital distortions to restore system stability.</p>
+                </motion.div>
+                {zone.challenges.length > 0 ? (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {zone.challenges.map((challenge, index) => (
+                            <ChallengeCard key={challenge.id} challenge={challenge} index={index} />
+                        ))}
+                    </div>
+                ) : (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="text-center py-12">
+                        <div className="text-6xl mb-4">✅</div>
+                        <h3 className="text-xl font-bold font-cyber mb-2">Zone Secured</h3>
+                        <p className="text-muted-foreground">All anomalies in this zone have been resolved.</p>
+                    </motion.div>
+                )}
+            </div>
+        </div>
+    </AuthContext.Provider>
+  );
+};
+
+export default ChallengeView;
+
+
+
+
+
+HINTS CORRECTLY WORKING CHALLENGEView.TSX
+
+// src/pages/ChallengeView.tsx
+
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, MapPin, AlertTriangle } from 'lucide-react';
+
+// --- Real Imports ---
+import apiFetch from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import ChallengeCard from '@/components/ChallengeCard'; // Import the real component
+import { CyberButton } from '@/components/ui/cyber-button';
+import GlitchText from '@/components/GlitchText';
+
+// --- Type Definitions ---
+interface Challenge {
+  id: string;
+  title: string;
+  points: number;
+  difficulty: string;
+  description: string;
+  isSolved: boolean;
+  hints: string[];
+  sourceFiles?: { fileName: string; filePath: string }[];
+}
+
+interface Zone {
+  id: string;
+  name: string;
+  description: string;
+  order: number;
+  challenges: Challenge[];
+}
+
+// --- The Component ---
+const ChallengeView: React.FC = () => {
+    const { zoneId } = useParams<{ zoneId: string }>();
+    const navigate = useNavigate();
+    const { refetchTeam } = useAuth(); // Get refetch function from context
+    const [zone, setZone] = useState<Zone | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchZoneData = async () => {
+        if (!zoneId) {
+            setError("No Zone ID provided.");
+            setIsLoading(false);
+            return;
+        }
+        try {
+            const allZones: Zone[] = await apiFetch('/challenges/zones');
+            const currentZone = allZones.find(z => z.id === zoneId);
+            
+            if (currentZone) {
+                setZone(currentZone);
+                setError(null);
+            } else {
+                setError(`Zone with ID '${zoneId}' could not be found.`);
+            }
+        } catch (err: any) {
+            setError(err.message || "Failed to connect to the server.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        setIsLoading(true);
+        fetchZoneData();
+    }, [zoneId]);
+
+    const handleChallengeSolved = () => {
+        // This function is passed to each ChallengeCard.
+        // When a challenge is solved, the card calls this function.
+        fetchZoneData(); // Refetch zone data to update 'isSolved' status
+        refetchTeam();   // Refetch global team data to update score, etc.
+    };
+
+    if (isLoading) {
+        return <div className="min-h-screen flex items-center justify-center font-cyber animate-pulse">LOADING ZONE DATA...</div>;
+    }
+
+    if (error || !zone) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center text-center p-4">
+                <AlertTriangle className="w-12 h-12 text-destructive mb-4" />
+                <h1 className="text-2xl font-bold text-destructive-foreground mb-4">Zone Not Found</h1>
+                <p className="text-muted-foreground mb-6">{error}</p>
+                <CyberButton onClick={() => navigate('/dashboard')}>Return to Dashboard</CyberButton>
+            </div>
+        );
+    }
+
+    const totalPoints = zone.challenges.reduce((sum, c) => sum + c.points, 0);
+    const difficultySpread = `${zone.challenges.filter(c => c.difficulty === 'Easy').length}E / ${zone.challenges.filter(c => c.difficulty === 'Medium').length}M / ${zone.challenges.filter(c => c.difficulty === 'Hard').length}H`;
+    
+    return (
+        <div className="min-h-screen p-6">
+            <motion.div initial={{ opacity: 0, y: -30 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+                <CyberButton variant="ghost" onClick={() => navigate('/dashboard')} className="gap-2 mb-4">
+                    <ArrowLeft className="w-4 h-4" />Back to Dashboard
+                </CyberButton>
+                <div className="flex items-center gap-3 mb-2">
+                    <MapPin className="w-6 h-6 text-primary" />
+                    <GlitchText className="text-3xl font-bold">{zone.name.toUpperCase()}</GlitchText>
+                </div>
+                <p className="text-muted-foreground font-cyber max-w-2xl">{zone.description}</p>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="zone-card p-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                    <div>
+                        <div className="text-2xl font-bold font-mono text-primary mb-2">{zone.challenges.length}</div>
+                        <div className="text-sm text-muted-foreground font-cyber">Total Anomalies</div>
+                    </div>
+                    <div>
+                        <div className="text-2xl font-bold font-mono text-secondary mb-2">{totalPoints}</div>
+                        <div className="text-sm text-muted-foreground font-cyber">Possible Points</div>
+                    </div>
+                    <div>
+                        <div className="text-2xl font-bold font-mono text-success mb-2">{difficultySpread}</div>
+                        <div className="text-sm text-muted-foreground font-cyber">Difficulty Spread</div>
+                    </div>
+                </div>
+            </motion.div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {zone.challenges.map((challenge, index) => (
+                    <ChallengeCard 
+                        key={challenge.id} 
+                        challenge={challenge} 
+                        index={index} 
+                        onChallengeSolved={handleChallengeSolved} // Pass the callback here
+                    />
+                ))}
+            </div>
+        </div>
+    );
+};
+
+export default ChallengeView;

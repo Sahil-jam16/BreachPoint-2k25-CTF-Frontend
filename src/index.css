@@ -1,0 +1,207 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Pixel Rift: Anomaly Echo - Cyberpunk CTF Platform Design System
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Core cyberpunk palette */
+    --background: 220 13% 5%;
+    --foreground: 180 100% 90%;
+
+    --card: 220 13% 8%;
+    --card-foreground: 180 100% 90%;
+
+    --popover: 220 13% 8%;
+    --popover-foreground: 180 100% 90%;
+
+    /* Neon accent colors */
+    --primary: 180 100% 50%; /* Electric cyan */
+    --primary-foreground: 220 13% 5%;
+
+    --secondary: 300 100% 50%; /* Hot magenta */
+    --secondary-foreground: 180 100% 90%;
+
+    --success: 120 100% 50%; /* Matrix green */
+    --success-foreground: 220 13% 5%;
+
+    --muted: 220 13% 15%;
+    --muted-foreground: 180 50% 60%;
+
+    --accent: 180 100% 50%;
+    --accent-foreground: 220 13% 5%;
+
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 180 100% 90%;
+
+    --border: 180 100% 20%;
+    --input: 220 13% 12%;
+    --ring: 180 100% 50%;
+
+    --radius: 0.25rem;
+
+    /* Custom cyberpunk gradients */
+    --gradient-cyber: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+    --gradient-glitch: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--success)), hsl(var(--secondary)));
+    --gradient-void: linear-gradient(180deg, hsl(var(--background)), hsl(220 13% 2%));
+
+    /* Glitch effects */
+    --glitch-shadow: 0 0 20px hsl(var(--primary) / 0.5);
+    --neon-glow: 0 0 30px hsl(var(--primary) / 0.8), 0 0 60px hsl(var(--primary) / 0.4);
+    --terminal-glow: 0 0 10px hsl(var(--success) / 0.6);
+
+    /* Animation timings */
+    --transition-glitch: all 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  /* Dark mode is default for cyberpunk theme */
+  .light {
+    /* Light mode not used in cyberpunk theme */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-mono;
+    background-image: 
+      radial-gradient(circle at 25% 25%, hsl(var(--primary) / 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 75% 75%, hsl(var(--secondary) / 0.1) 0%, transparent 50%);
+  }
+
+  /* Typography styles */
+  .font-cyber {
+    font-family: 'Courier New', 'Roboto Mono', monospace;
+    letter-spacing: 0.05em;
+  }
+
+  /* Glitch effect classes */
+  .glitch-text {
+    position: relative;
+    color: hsl(var(--foreground));
+    text-shadow: var(--glitch-shadow);
+  }
+
+  .glitch-text::before,
+  .glitch-text::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .glitch-text::before {
+    animation: glitch-anim-1 0.3s infinite linear alternate-reverse;
+    color: hsl(var(--primary));
+    z-index: -1;
+  }
+
+  .glitch-text::after {
+    animation: glitch-anim-2 0.3s infinite linear alternate-reverse;
+    color: hsl(var(--secondary));
+    z-index: -2;
+  }
+
+  /* Neon glow effects */
+  .neon-glow {
+    box-shadow: var(--neon-glow);
+  }
+
+  .terminal-glow {
+    box-shadow: var(--terminal-glow);
+  }
+
+  /* Cyberpunk button styles */
+  .cyber-button {
+    background: linear-gradient(45deg, transparent, hsl(var(--primary) / 0.1), transparent);
+    border: 1px solid hsl(var(--primary) / 0.5);
+    transition: var(--transition-smooth);
+  }
+
+  .cyber-button:hover {
+    background: linear-gradient(45deg, hsl(var(--primary) / 0.1), hsl(var(--primary) / 0.2), hsl(var(--primary) / 0.1));
+    border-color: hsl(var(--primary));
+    box-shadow: var(--neon-glow);
+    transform: translateY(-2px);
+  }
+
+  /* Zone card animations */
+  .zone-card {
+    background: linear-gradient(135deg, hsl(var(--card)), hsl(var(--muted) / 0.5));
+    border: 1px solid hsl(var(--border));
+    transition: var(--transition-smooth);
+  }
+
+  .zone-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 30px hsl(var(--primary) / 0.3);
+    border-color: hsl(var(--primary) / 0.7);
+  }
+
+  .zone-card.solved {
+    background: linear-gradient(135deg, hsl(var(--success) / 0.1), hsl(var(--card)));
+    border-color: hsl(var(--success));
+    box-shadow: var(--terminal-glow);
+  }
+
+  /* Terminal styles */
+  .terminal {
+    background: hsl(var(--background));
+    border: 1px solid hsl(var(--success) / 0.3);
+    font-family: 'Courier New', monospace;
+  }
+
+  /* Progress animations */
+  .healing-animation {
+    animation: heal-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes glitch-anim-1 {
+    0%, 9%, 11%, 100% { transform: translate(0); }
+    10% { transform: translate(-2px, -2px); }
+  }
+
+  @keyframes glitch-anim-2 {
+    0%, 9%, 11%, 100% { transform: translate(0); }
+    10% { transform: translate(2px, 2px); }
+  }
+
+  @keyframes heal-pulse {
+    0%, 100% { box-shadow: 0 0 10px hsl(var(--success) / 0.3); }
+    50% { box-shadow: 0 0 30px hsl(var(--success) / 0.8), 0 0 60px hsl(var(--success) / 0.4); }
+  }
+
+  @keyframes flicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+  }
+
+  .flicker {
+    animation: flicker 0.15s infinite linear;
+  }
+}

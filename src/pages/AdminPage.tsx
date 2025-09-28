@@ -199,7 +199,7 @@ const AdminPage: React.FC = () => {
         <h1 className="text-3xl font-bold font-cyber mb-2 text-primary flex items-center gap-3">
             <Shield /> Admin Control Panel
         </h1>
-        <p className="text-muted-foreground mb-8">Create and manage CTF zones and challenges. X-API-KEY: BreachPoint_2k25_Admin_Key</p>
+        <p className="text-muted-foreground mb-8">Create and manage CTF zones and challenges.</p>
 
         {/* API Key Input */}
         <Card className="mb-8">

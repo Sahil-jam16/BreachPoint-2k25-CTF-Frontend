@@ -156,7 +156,7 @@ const Leaderboard: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1"><Zap className="w-4 h-4" />{team.solvedChallenges.length} solved</span>
-                      <span className="flex items-center gap-1"><Trophy className="w-4 h-4" />{team.badges.length} badges</span>
+                      {/* <span className="flex items-center gap-1"><Trophy className="w-4 h-4" />{team.badges.length} badges</span> */}
                     </div>
                   </div>
                 </div>

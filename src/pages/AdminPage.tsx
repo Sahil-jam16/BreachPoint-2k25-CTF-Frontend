@@ -93,7 +93,6 @@ const AdminPage: React.FC = () => {
             setChallenges(challengesData);
             setLeaderboard(leaderboardData);
             setSubmissions(submissionsData);
-            //console.log("Fetched Data:", submissionsData );
         } catch (error: any) {
             toast({ variant: "destructive", title: "Error", description: error.message });
         } finally {

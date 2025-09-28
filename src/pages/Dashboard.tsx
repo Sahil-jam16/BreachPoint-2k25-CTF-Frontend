@@ -96,8 +96,6 @@ const Dashboard: React.FC = () => {
       </div>
     );
   }
-  //console.log(currentTeam);
-  //console.log(zonesData);
 
   // Display an error message if the API call fails
   if (error) {

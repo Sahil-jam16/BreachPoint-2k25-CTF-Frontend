@@ -1,13 +1,9 @@
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
-
 async function apiFetch(endpoint: string, options: RequestInit = {}) {
   const token = localStorage.getItem('authToken');
-  console.log("API_URL is set to:", API_URL);
-  
-  // Start with headers from options, but don't default a Content-Type yet.
+ 
   const headers = new Headers(options.headers || {});
-
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
@@ -32,7 +28,6 @@ async function apiFetch(endpoint: string, options: RequestInit = {}) {
       config.body = JSON.stringify(config.body);
     }
   }
-  // --- END OF UPGRADE ---
 
   const response = await fetch(`${API_URL}${endpoint}`, config);
   

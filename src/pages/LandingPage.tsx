@@ -115,7 +115,7 @@ const LandingPage: React.FC = () => {
             <div className="text-sm text-muted-foreground">Corrupted Zones</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-secondary font-mono">08</div>
+            <div className="text-2xl font-bold text-secondary font-mono">23</div>
             <div className="text-sm text-muted-foreground">Active Anomalies</div>
           </div>
           <div className="text-center">

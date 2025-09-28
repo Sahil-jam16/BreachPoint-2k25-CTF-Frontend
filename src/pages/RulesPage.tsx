@@ -20,7 +20,7 @@ const rulesData = [
       <>
         The official communication channel is our{' '}
         <a
-          href="https://discord.gg/YOUR_SERVER_INVITE" // <-- REPLACE WITH YOUR DISCORD LINK
+          href="https://discord.com/invite/s3usndzs"
           target="_blank"
           rel="noopener noreferrer"
           className="font-bold text-primary underline hover:text-primary/80"

@@ -69,7 +69,6 @@ const ChallengeCard: React.FC<ChallengeCardProps> = ({ challenge, index, onChall
     setIsSubmitting(true);
     
     try {
-      console.log(challenge);
       await apiFetch('/challenges/submit', {
         method: 'POST',
         body: { challengeId: challenge.id, flag: flagInput.trim() },

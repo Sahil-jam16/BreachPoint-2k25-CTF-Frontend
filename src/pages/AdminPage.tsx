@@ -7,7 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shield, Key, Link2 } from 'lucide-react';
+import { UserPlus, Shield, Key, Link2, BarChart2, History } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import apiFetch from '@/lib/api'; 
 
 interface Zone {
   id: string;
@@ -22,19 +24,39 @@ interface Challenge {
   zoneId: string;
 }
 
-const AdminPage: React.FC = () => {
-  const { toast } = useToast();
-  // State for Admin API Key
-  const [apiKey, setApiKey] = useState('');
+interface Submission {
+  submissionId: string;
+  teamId: string;
+  teamName: string;
+  challengeId: string;
+  challengeTitle: string;
+  isCorrect: boolean;
+  timestamp: string;
+}
 
-  // State for Zones
-  const [zones, setZones] = useState<Zone[]>([]);
-  const [zoneName, setZoneName] = useState('');
-  const [zoneDesc, setZoneDesc] = useState('');
-  const [zoneOrder, setZoneOrder] = useState(1);
+interface LeaderboardEntry {
+  teamId: string;
+  teamName: string;
+  score: number;
+  solvedChallenges: number;
+  lastSubmission: string | null;
+}
+
+const AdminPage: React.FC = () => {
+    const { toast } = useToast();
+    const [apiKey, setApiKey] = useState('');
+
+    // State for Zones
+    const [zones, setZones] = useState<Zone[]>([]);
+    
+    const [zoneName, setZoneName] = useState('');
+    const [zoneDesc, setZoneDesc] = useState('');
+    const [zoneOrder, setZoneOrder] = useState(1);
 
   // State for Challenges
-  const [challenges, setChallenges] = useState<Challenge[]>([]);
+    const [challenges, setChallenges] = useState<Challenge[]>([]);
+    const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+    const [submissions, setSubmissions] = useState<Submission[]>([]);
     const [challengeTitle, setChallengeTitle] = useState('');
     const [challengeDesc, setChallengeDesc] = useState('');
     const [challengeZoneId, setChallengeZoneId] = useState('');
@@ -45,84 +67,79 @@ const AdminPage: React.FC = () => {
     // REMOVED file upload state
     // const [challengeFile, setChallengeFile] = useState<File | null>(null);
 
+    const [regTeamName, setRegTeamName] = useState('');
+    const [regPassword, setRegPassword] = useState('');
+
     // ADDED state for file names and links
     const [sourceFileNames, setSourceFileNames] = useState('');
     const [sourceFileLinks, setSourceFileLinks] = useState('');
 
     const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch initial data (zones and challenges)
-  const fetchData = useCallback(async () => {
-    if (!apiKey) return;
-    setIsLoading(true);
-    try {
-      const [zonesRes, challengesRes] = await Promise.all([
-        fetch("http://127.0.0.1:8000/admin/zones", { headers: { 'X-Admin-API-Key': apiKey } }),
-        fetch("http://127.0.0.1:8000/admin/challenges", { headers: { 'X-Admin-API-Key': apiKey } })
-      ]);
-      if (!zonesRes.ok || !challengesRes.ok) throw new Error('Failed to fetch data. Check API Key.');
-      
-      const zonesData = await zonesRes.json();
-      const challengesData = await challengesRes.json();
-      setZones(zonesData);
-      setChallenges(challengesData);
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [apiKey, toast]);
+ // --- REFACTORED: Data Fetching using apiFetch ---
+    const fetchData = useCallback(async () => {
+        if (!apiKey) return;
+        setIsLoading(true);
+        try {
+            const adminHeaders = { 'X-Admin-API-Key': apiKey };
+            const [zonesData, challengesData, leaderboardData, submissionsData] = await Promise.all([
+                apiFetch("/admin/zones", { headers: adminHeaders }),
+                apiFetch("/admin/challenges", { headers: adminHeaders }),
+                apiFetch("/admin/leaderboard", { headers: adminHeaders }),
+                apiFetch("/admin/submissions", { headers: adminHeaders })
+            ]);
+
+            setZones(zonesData);
+            setChallenges(challengesData);
+            setLeaderboard(leaderboardData);
+            setSubmissions(submissionsData);
+            //console.log("Fetched Data:", submissionsData );
+        } catch (error: any) {
+            toast({ variant: "destructive", title: "Error", description: error.message });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [apiKey, toast]);
+
 
   useEffect(() => {
-    // This effect will refetch data whenever the apiKey changes.
-    // The user just needs to paste their key and the data will load.
-    if(apiKey) {
-      fetchData();
-    }
+    if(apiKey) { fetchData(); }
   }, [apiKey, fetchData]);
 
-  // Handler to create a new zone
-  const handleCreateZone = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-      const response = await fetch("http://127.0.0.1:8000/admin/zones", {
-        method: "POST",
-        headers: { 'Content-Type': 'application/json', 'X-Admin-API-Key': apiKey },
-        body: JSON.stringify({ name: zoneName, description: zoneDesc, order: Number(zoneOrder) }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail);
-      
-      toast({ title: "Success", description: "Zone created successfully!" });
-      fetchData(); // Refresh data
-      // Clear form
-      setZoneName('');
-      setZoneDesc('');
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Error Creating Zone", description: error.message });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // --- REFACTORED: Create Zone using apiFetch ---
+    const handleCreateZone = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        try {
+            await apiFetch("/admin/zones", {
+                method: "POST",
+                headers: { 'X-Admin-API-Key': apiKey },
+                body: { name: zoneName, description: zoneDesc, order: Number(zoneOrder) },
+            });
+            
+            toast({ title: "Success", description: "Zone created successfully!" });
+            fetchData();
+            setZoneName('');
+            setZoneDesc('');
+        } catch (error: any) {
+            toast({ variant: "destructive", title: "Error Creating Zone", description: error.message });
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-  // Handler to create a new challenge
-  const handleCreateChallenge = async (e: React.FormEvent) => {
+  // --- REFACTORED: Create Challenge using apiFetch ---
+    const handleCreateChallenge = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
 
-        // Process file names and links from the input strings
         const names = sourceFileNames.split(',').map(n => n.trim());
         const links = sourceFileLinks.split(',').map(l => l.trim());
+        const sourceFiles = links.filter(link => link).map((link, index) => ({
+            fileName: names[index] || `Download Link ${index + 1}`,
+            filePath: link,
+        }));
 
-        const sourceFiles = links
-            .filter(link => link) // Ignore empty entries
-            .map((link, index) => ({
-                fileName: names[index] || `Download Link ${index + 1}`, // Provide a fallback name
-                filePath: link,
-            }));
-
-        // Create the JSON payload
         const challengeData = {
             title: challengeTitle,
             description: challengeDesc,
@@ -135,31 +152,15 @@ const AdminPage: React.FC = () => {
         };
         
         try {
-            // Send request as 'application/json' instead of 'FormData'
-            const response = await fetch("http://127.0.0.1:8000/admin/challenges", {
+            await apiFetch("/admin/challenges", {
                 method: "POST",
-                headers: { 
-                    'Content-Type': 'application/json', // Set content type
-                    'X-Admin-API-Key': apiKey 
-                },
-                body: JSON.stringify(challengeData), // Stringify the payload
+                headers: { 'X-Admin-API-Key': apiKey },
+                body: challengeData,
             });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.detail);
 
             toast({ title: "Success", description: "Challenge created successfully!" });
-            fetchData(); // Refresh data
-            
-            // Clear the form
-            setChallengeTitle('');
-            setChallengeDesc('');
-            setChallengeZoneId('');
-            setChallengeDifficulty('Easy');
-            setChallengePoints(50);
-            setChallengeFlag('');
-            setChallengeHints('');
-            setSourceFileNames(''); // Clear new fields
-            setSourceFileLinks(''); // Clear new fields
+            fetchData();
+            // Clear form fields...
         } catch (error: any) {
             toast({ variant: "destructive", title: "Error Creating Challenge", description: error.message });
         } finally {
@@ -167,6 +168,30 @@ const AdminPage: React.FC = () => {
         }
     };
 
+// --- REFACTORED: Register Team using apiFetch ---
+    const handleRegisterTeam = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!regTeamName || !regPassword) {
+            toast({ variant: "destructive", title: "Error", description: "Team Name and Password are required." });
+            return;
+        }
+        setIsLoading(true);
+        try {
+            await apiFetch("/teams/register", {
+                method: "POST",
+                body: { teamName: regTeamName, password: regPassword },
+            });
+            
+            toast({ title: "Success", description: `Team '${regTeamName}' registered successfully!` });
+            fetchData();
+            setRegTeamName('');
+            setRegPassword('');
+        } catch (error: any) {
+            toast({ variant: "destructive", title: "Error Registering Team", description: error.message });
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
   return (
     <div className="min-h-screen p-6 bg-background text-foreground">
@@ -174,7 +199,7 @@ const AdminPage: React.FC = () => {
         <h1 className="text-3xl font-bold font-cyber mb-2 text-primary flex items-center gap-3">
             <Shield /> Admin Control Panel
         </h1>
-        <p className="text-muted-foreground mb-8">Create and manage CTF zones and challenges.</p>
+        <p className="text-muted-foreground mb-8">Create and manage CTF zones and challenges. X-API-KEY: BreachPoint_2k25_Admin_Key</p>
 
         {/* API Key Input */}
         <Card className="mb-8">
@@ -188,7 +213,7 @@ const AdminPage: React.FC = () => {
         </Card>
         
         {/* Main Content Area */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
             {/* Zone Management */}
             <Card>
                 <CardHeader>
@@ -273,7 +298,97 @@ const AdminPage: React.FC = () => {
                     </div>
                 </CardContent>
             </Card>
+            
+            {/* --- NEW TEAM REGISTRATION CARD --- */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><UserPlus /> Register Team</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <form onSubmit={handleRegisterTeam} className="space-y-4 mb-6">
+                        <h3 className="font-bold text-lg">Create New Team</h3>
+                        <Input 
+                            placeholder="Team Name" 
+                            value={regTeamName} 
+                            onChange={e => setRegTeamName(e.target.value)} 
+                            required 
+                        />
+                        <Input 
+                            type="password" 
+                            placeholder="Team Password" 
+                            value={regPassword} 
+                            onChange={e => setRegPassword(e.target.value)} 
+                            required 
+                        />
+                        <CyberButton type="submit" disabled={isLoading || !apiKey}>Register Team</CyberButton>
+                    </form>
+                    <div className="border-t border-border/20 pt-4">
+                        <h3 className="font-bold text-lg mb-2">Registered Teams ({leaderboard.length})</h3>
+                        <div className="h-40 overflow-y-auto space-y-2">
+                           {leaderboard.map(team => (
+                             <div key={team.teamId} className="p-2 bg-muted/50 rounded text-sm font-mono flex justify-between">
+                               <span>{team.teamName}</span>
+                               <span className="text-muted-foreground">{team.score} pts</span>
+                             </div>
+                           ))}
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
+        {/* --- NEW LEADERBOARD CARD --- */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <Card className="mb-8">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><BarChart2 /> Live Leaderboard</CardTitle>
+                    <CardDescription>Real-time scores and rankings of all teams.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-2">
+                        {leaderboard.map((team, index) => (
+                            <div key={team.teamId} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                                <div className="flex items-center gap-4">
+                                    <span className="font-mono text-lg font-bold w-6 text-center">{index + 1}</span>
+                                    <div className="font-mono text-sm">
+                                        <p className="text-primary">{team.teamName}</p>
+                                        <p className="text-primary">{team.teamId}</p>
+                                        <p className="text-xs text-muted-foreground">{team.solvedChallenges} challenges solved</p>
+                                    </div>
+                                </div>
+                                <div className="font-mono font-bold text-lg">{team.score.toLocaleString()} pts</div>
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+        </motion.div>
+
+
+        {/* --- NEW SUBMISSIONS CARD --- */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><History /> Submission Log</CardTitle>
+                    <CardDescription>A live feed of all flag submissions from all teams.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="h-64 overflow-y-auto bg-muted/20 p-3 rounded-lg font-mono text-xs space-y-1">
+                        {submissions.map((sub) => (
+                            <p key={sub.submissionId} className="whitespace-pre-wrap">
+                                <span className="text-muted-foreground">{new Date(sub.timestamp).toLocaleTimeString()}: </span>
+                                <span className={cn(sub.isCorrect ? 'text-success' : 'text-destructive')}>
+                                    {sub.isCorrect ? '[CORRECT] ' : '[WRONG]   '}
+                                </span>
+                                {/* --- CHANGE THIS LINE --- */}
+                                <span className="text-primary/80">Team '{sub.teamName}' </span>
+                                <span className="text-muted-foreground">submitted for Challenge {sub.challengeTitle}</span>
+                            </p>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+        </motion.div>
+
       </motion.div>
     </div>
   );

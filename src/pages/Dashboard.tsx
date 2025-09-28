@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import ZoneCard from '@/components/ZoneCard';
 import GlitchText from '@/components/GlitchText';
-import { LogOut, Trophy, Zap, Shield, Target, AlertTriangle } from 'lucide-react';
+import { LogOut, Trophy, Zap, Shield, Target, AlertTriangle, Gavel, ScrollText } from 'lucide-react';
 import apiFetch from '@/lib/api'; // Assuming your API helper is here
 
 // Define TypeScript interfaces to match the backend response structure
@@ -96,8 +96,8 @@ const Dashboard: React.FC = () => {
       </div>
     );
   }
-  console.log(currentTeam);
-  console.log(zonesData);
+  //console.log(currentTeam);
+  //console.log(zonesData);
 
   // Display an error message if the API call fails
   if (error) {
@@ -138,6 +138,14 @@ const Dashboard: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-4">
+          <CyberButton
+            variant="outline"
+            onClick={() => navigate('/rules')}
+            className="gap-2"
+          >
+            <ScrollText className="w-4 h-4" />
+            Rules
+          </CyberButton>
           <CyberButton
             variant="outline"
             onClick={() => navigate('/leaderboard')}
@@ -187,7 +195,7 @@ const Dashboard: React.FC = () => {
           <Progress value={progress} className="h-2" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="text-center p-3 bg-muted/20 rounded-lg">
             <div className="flex items-center justify-center gap-2 mb-1">
               <Target className="w-4 h-4 text-success" />
@@ -204,14 +212,7 @@ const Dashboard: React.FC = () => {
             <div className="text-lg font-bold font-mono text-primary">{currentTeam.score}</div>
           </div>
           
-          <div className="text-center p-3 bg-muted/20 rounded-lg">
-            <div className="flex items-center justify-center gap-2 mb-1">
-              <Trophy className="w-4 h-4 text-secondary" />
-              <span className="text-sm font-cyber text-muted-foreground">Badges</span>
-            </div>
-            {/* Make sure 'badges' is a property on your Team type */}
-            <div className="text-lg font-bold font-mono text-secondary">{currentTeam.badges?.length || 0}</div>
-          </div>
+          
         </div>
       </motion.div>
 

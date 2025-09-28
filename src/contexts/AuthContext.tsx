@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { Team } from '@/data/mockData';
+import { Team } from '@/data/mockData'; // Assuming you have this type defined
 import apiFetch from '@/lib/api';
 
 interface AuthContextType {
@@ -31,6 +31,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const fetchTeamData = useCallback(async () => {
+    // Only fetch if a token exists
     if (localStorage.getItem('authToken')) {
       try {
         const teamData = await apiFetch('/teams/me');
@@ -47,24 +48,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     fetchTeamData();
   }, [fetchTeamData]);
 
+  // --- SIMPLIFIED LOGIN FUNCTION ---
   const login = async (teamName: string, password: string) => {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/teams/login`, {
+    const data = await apiFetch('/teams/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        // `apiFetch` now handles the headers and body type correctly
         body: new URLSearchParams({ username: teamName, password }),
     });
-    console.log(response);
     
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.detail || 'Login failed');
-    
+    // The error handling is now done inside apiFetch, so we only handle success here.
     const newToken = data.access_token;
     localStorage.setItem('authToken', newToken);
     setToken(newToken);
-    await fetchTeamData();
+    await fetchTeamData(); // Fetch user data after getting the new token
   };
 
   const refetchTeam = async () => {
+    setIsLoading(true);
     await fetchTeamData();
   };
   
@@ -74,4 +74,3 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     </AuthContext.Provider>
   );
 };
-

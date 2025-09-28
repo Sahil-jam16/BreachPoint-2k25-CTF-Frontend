@@ -37,7 +37,6 @@ const LoginPage: React.FC = () => {
       navigate('/dashboard');
 
     } catch (error: any) {
-      // This block runs if the login function throws an error
       toast({
         variant: "destructive",
         title: "Access Denied",

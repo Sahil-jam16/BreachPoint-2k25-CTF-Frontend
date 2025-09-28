@@ -34,13 +34,13 @@ const LandingPage: React.FC = () => {
           className="mb-8"
         >
           <GlitchText className="text-6xl md:text-8xl font-bold mb-4 text-transparent bg-gradient-cyber bg-clip-text">
-            PIXEL RIFT
+            BREACHPOINT
           </GlitchText>
           <GlitchText 
             className="text-2xl md:text-4xl font-bold text-secondary" 
             intensity="low"
           >
-            ANOMALY ECHO
+            The Ultimate Battle
           </GlitchText>
         </motion.div>
 

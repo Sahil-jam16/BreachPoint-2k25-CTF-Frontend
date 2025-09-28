@@ -10,7 +10,9 @@ import Dashboard from "./pages/Dashboard";
 import AdminPage from "./pages/AdminPage";
 import ChallengeView from "./pages/ChallengeView";
 import Leaderboard from "./pages/Leaderboard";
+import RulesPage from "./pages/RulesPage";
 import NotFound from "./pages/NotFound";
+
 
 const queryClient = new QueryClient();
 
@@ -28,7 +30,7 @@ const App = () => (
             <Route path="/challenges/:zoneId" element={<ChallengeView />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/admin" element={<AdminPage/>} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="/rules" element={<RulesPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

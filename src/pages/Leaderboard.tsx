@@ -9,13 +9,13 @@ import { ArrowLeft, Trophy, Medal, Award, Crown, Zap, AlertTriangle, Loader } fr
 import { cn } from '@/lib/utils';
 import apiFetch from '@/lib/api';
 
-// Interface to match your API response for a single team
 interface Team {
   id: string;
   teamName: string;
   score: number;
   solvedChallenges: string[];
   badges: string[];
+  lastSubmissionTs: string;
 }
 
 const Leaderboard: React.FC = () => {

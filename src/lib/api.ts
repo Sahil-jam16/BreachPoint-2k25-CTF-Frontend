@@ -3,20 +3,11 @@ const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 async function apiFetch(endpoint: string, options: RequestInit = {}) {
   const token = localStorage.getItem('authToken');
 
-  const headers = new Headers({
-    'Content-Type': 'application/json',
-  });
+  // Start with headers from options, but don't default a Content-Type yet.
+  const headers = new Headers(options.headers || {});
 
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
-  }
-
-  // Merge any custom headers passed in options
-  if (options.headers) {
-    const customHeaders = new Headers(options.headers);
-    customHeaders.forEach((value, key) => {
-      headers.set(key, value);
-    });
   }
   
   const config: RequestInit = {
@@ -24,11 +15,22 @@ async function apiFetch(endpoint: string, options: RequestInit = {}) {
     headers,
   };
 
-  // --- THE FIX ---
-  // If the body is an object, it MUST be stringified before being sent.
-  if (config.body && typeof config.body !== 'string') {
-    config.body = JSON.stringify(config.body);
+  // --- THE UPGRADE ---
+  // This block intelligently formats the body and sets the correct Content-Type.
+  if (config.body) {
+    if (config.body instanceof URLSearchParams) {
+      // This handles the login request.
+      headers.set('Content-Type', 'application/x-www-form-urlencoded');
+    } else if (config.body instanceof FormData) {
+      // For potential file uploads in the future.
+      // We let the browser set the Content-Type automatically.
+    } else if (typeof config.body === 'object') {
+      // This handles all your standard JSON requests.
+      headers.set('Content-Type', 'application/json');
+      config.body = JSON.stringify(config.body);
+    }
   }
+  // --- END OF UPGRADE ---
 
   const response = await fetch(`${API_URL}${endpoint}`, config);
   
